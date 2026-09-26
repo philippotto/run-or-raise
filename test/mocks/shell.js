@@ -1,6 +1,6 @@
 // Fake GNOME Shell runtime objects: settings, windows, `global.display`.
 import { readFileSync } from "node:fs"
-import { Emitter, GLib, Gio, Shell } from "./gi.js"
+import { Actor, Clutter, Emitter, GLib, Gio, Shell } from "./gi.js"
 import * as Main from "./main.js"
 
 const SCHEMA = new URL(
@@ -45,7 +45,8 @@ export class Window {
     Object.assign(this, { wm_class, wm_class_instance, title, monitor })
     this.workspace = workspace
     this.minimized = false
-    this.actor = new Emitter()
+    this.actor = new Actor()
+    this.actor.add_child(new Actor()) // the surface
   }
 
   get_id() {
@@ -67,7 +68,7 @@ export class Window {
     return this.workspace
   }
   get_compositor_private() {
-    return this.actor
+    return this.actor?.destroyed ? null : this.actor
   }
   get_frame_rect() {
     return { x: 100, y: 100, width: 200, height: 100 }
@@ -80,9 +81,14 @@ export class Window {
   }
   minimize() {
     this.minimized = true
+    this.actor.hide()
   }
   _focus() {
     display.focused = this
+    // raise to the top of the stack
+    if (this.actor) {
+      display.window_group.set_child_above_sibling(this.actor, null)
+    }
     // tab list is ordered by the most recent use
     display.windows = [this, ...display.windows.filter(w => w !== this)]
   }
@@ -94,6 +100,7 @@ class Display extends Emitter {
     this.windows = [] // most recently used first
     this.focused = null
     this.grabbed = new Map() // action id → accelerator
+    this.window_group = new Actor() // window actors, bottom to top
     this._next_action = 1
   }
 
@@ -114,9 +121,16 @@ class Display extends Emitter {
     }
   }
 
+  get_keybinding_action(keycode) {
+    // keycodes are the shortcuts themselves in the mock
+    return [...this.grabbed].find(([, s]) => s === keycode)?.[0] ?? 0
+  }
+
   /** Add a window, most recently used first */
   add(window, focus = false) {
     this.windows.push(window)
+    // stacked below the ones already there
+    this.window_group.set_child_at_index(window.actor, 0)
     if (focus) {
       window._focus()
     }
@@ -136,7 +150,8 @@ export function reset() {
   global.workspaceManager = {
     get_active_workspace: () => "ws0",
   }
-  global.get_pointer = () => [0, 0]
+  global.get_pointer = () => [0, 0, 0]
+  global.get_window_actors = () => display.window_group.get_children()
   GLib._reset()
   Gio.Subprocess.spawned.length = 0
   Shell._files.clear()
@@ -145,6 +160,8 @@ export function reset() {
   Main.notifications.length = 0
   Main.wm.allowed.clear()
   Main.layoutManager.chrome.length = 0
+  Main.modals.length = 0
+  Main.grab.state = Clutter.GrabState.ALL
   return display
 }
 
@@ -155,6 +172,7 @@ export function fakeApp(settings = new Settings()) {
   return {
     settings,
     register: [],
+    cycle: null,
     watching_actions: new Set(),
     seat: {
       warped: [],

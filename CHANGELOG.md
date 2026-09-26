@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## Unreleased
+- enh: cycle windows in the most-recently-used order like Alt+Tab; while the modifiers are held, windows are peeked and only the one selected on release gets focused, keeping the most-recently-used order intact
+
 ## 47 (2026-09-25)
 - fix: force-focus the launched/raised window on Wayland instead of relying on its activation token, which GNOME denies even for its own keybindings
 

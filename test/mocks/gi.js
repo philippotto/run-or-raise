@@ -142,7 +142,7 @@ export const Gio = {
 }
 
 export const Shell = {
-  ActionMode: { NONE: 0, ALL: 1 },
+  ActionMode: { NONE: 0, ALL: 1, POPUP: 2 },
   /** path → file contents, see get_file_contents_utf8_sync */
   _files: new Map(),
   get_file_contents_utf8_sync(path) {
@@ -186,7 +186,67 @@ export const Meta = {
   },
 }
 
+/**
+ * Clutter.Actor stand-in, enough for the window actors and the grab actor.
+ * Transitions complete at once.
+ */
+export class Actor extends Emitter {
+  constructor(props = {}) {
+    super()
+    this.visible = true
+    this.opacity = 255
+    this.parent = null
+    this.children = []
+    this.destroyed = false
+    Object.assign(this, props)
+  }
+  get_parent() {
+    return this.parent
+  }
+  get_children() {
+    return [...this.children]
+  }
+  get_first_child() {
+    return this.children[0] ?? null
+  }
+  add_child(child) {
+    child.parent = this
+    this.children.push(child)
+  }
+  remove_child(child) {
+    this.children = this.children.filter(c => c !== child)
+    child.parent = null
+  }
+  set_child_above_sibling(child, sibling) {
+    // only the `sibling = null` (to the top) case is needed
+    this.remove_child(child)
+    this.add_child(child)
+  }
+  set_child_at_index(child, index) {
+    this.remove_child(child)
+    child.parent = this
+    this.children.splice(index, 0, child)
+  }
+  show() {
+    this.visible = true
+  }
+  hide() {
+    this.visible = false
+  }
+  ease({ opacity }) {
+    this.opacity = opacity
+  }
+  destroy() {
+    this.destroyed = true
+    this.parent?.remove_child(this)
+    this.emit("destroy")
+  }
+}
+
 export const St = {
+  Widget: class extends Actor {
+    grab_key_focus() {}
+  },
   Bin: class extends Emitter {
     constructor(props) {
       super()
@@ -202,6 +262,23 @@ export const St = {
 
 export const Clutter = new Proxy(
   {
+    EVENT_STOP: true,
+    EVENT_PROPAGATE: false,
+    ModifierType: {
+      SHIFT_MASK: 1 << 0,
+      LOCK_MASK: 1 << 1,
+      CONTROL_MASK: 1 << 2,
+      MOD1_MASK: 1 << 3,
+      MOD2_MASK: 1 << 4,
+      MOD3_MASK: 1 << 5,
+      MOD4_MASK: 1 << 6,
+      MOD5_MASK: 1 << 7,
+      SUPER_MASK: 1 << 26,
+      HYPER_MASK: 1 << 27,
+      META_MASK: 1 << 28,
+    },
+    GrabState: { NONE: 0, POINTER: 1, KEYBOARD: 2, ALL: 3 },
+    AnimationMode: { EASE_OUT_QUAD: 2 },
     get_default_backend() {
       return {
         get_default_seat() {

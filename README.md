@@ -2,6 +2,26 @@
 
 https://extensions.gnome.org/extension/1336/run-or-raise/
 
+## About this fork
+
+This fork cycles through the windows of an application the way <kbd>Alt</kbd>+<kbd>Tab</kbd> does:
+
+- Windows are cycled in the most-recently-used order: the first hit of a shortcut raises the last used window of the application, or if that one is focused already, the one used before it.
+- Hitting the shortcut again while keeping its modifiers held goes further back. Meanwhile, the windows are only peeked (the window is brought to the front, all other windows are dimmed); releasing the modifiers activates it. So peeking through the windows does not mess up their most-recently-used order. <kbd>Esc</kbd> cancels.
+
+### Setup
+
+```sh
+git clone git@github.com:philippotto/run-or-raise.git
+cd run-or-raise
+make install
+```
+
+- `make install` sets the extension version to 9999, which keeps extensions.gnome.org from replacing this build with its own release. Change it with `make install VERSION=…`. To go back to the official version, reinstall it from extensions.gnome.org.
+- Needs `gnome-extensions`, `glib-compile-schemas` and `jq`.
+- Log out and back in (on Wayland, GNOME Shell caches the extension code until it restarts).
+- The shortcuts in `~/.config/run-or-raise/shortcuts.conf` are kept.
+
 # About project
 
 I assume the run-or-raise style as the most efficient way of handling windows. No more searching for your favourite program in a long menu, no more clicking on the icons. If the program already runs it will get the focus, else we launch it.
@@ -49,7 +69,11 @@ Note that if an argument should contain a comma, use double quotes around.
 
 ## How to create a shortcut
 
-When you trigger a shortcut it lets you cycle amongst open instances of the application or if not found, launches a new instance. The file consists of shortcuts in the following form:
+When you trigger a shortcut it lets you cycle amongst open instances of the application or if not found, launches a new instance.
+
+Cycling follows the most-recently-used order, just like <kbd>Alt</kbd>+<kbd>Tab</kbd>: the first hit raises the last used window of the application, or if that one is focused already, the one used before it. Keep the modifiers held and hit the key again to go further back. Meanwhile, the windows are only peeked (the window is brought to the front and the other windows are dimmed); the window gets focused once you release the modifiers, so the order of the other windows stays intact. <kbd>Esc</kbd> cancels.
+
+The file consists of shortcuts in the following form:
 
 `shortcut[ shortcut][:mode],command,[wm_class],[title]`
 

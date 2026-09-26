@@ -96,6 +96,12 @@ class App {
      * @type {Set<Action>}
      */
     this.watching_actions = new Set()
+
+    /**
+     * Windows being cycled through while the shortcut modifiers are held.
+     * @type {?Cycle}
+     */
+    this.cycle = null
   }
 
   enable() {
@@ -111,32 +117,7 @@ class App {
     // Catch the signal that one of system-defined accelerators has been triggered
     this.handler_accelerator_activated = global.display.connect(
       "accelerator-activated",
-      (display_, action, deviceId, timestamp) => {
-        try {
-          const accelerator = this.accelerator_map.get(action)
-          if (!accelerator) {
-            // ex: Fn+volume_up for an unknown reason ends up here
-            return
-          }
-          if (this.handler_layered) {
-            this.layer_finished()
-
-            if (!accelerator.is_layered) {
-              // another accelerator activated while handling a layered shortcut → ignore
-              return false
-            }
-          }
-          const layered = accelerator.trigger()
-          if (layered.length) {
-            // start layered mode
-            this.layered_mode_start(layered)
-          } else {
-            this.layered_mode_stop()
-          }
-        } catch (e) {
-          this.error(e, "Accelerator failed")
-        }
-      },
+      (display_, action, deviceId, timestamp) => this.on_accelerator(action),
     )
 
     // parse shortcut file
@@ -200,6 +181,37 @@ class App {
     on_state_changed()
   }
 
+  /**
+   * One of the system-defined accelerators has been triggered
+   * @param {number} action ID of the grabbed accelerator
+   */
+  on_accelerator(action) {
+    try {
+      const accelerator = this.accelerator_map.get(action)
+      if (!accelerator) {
+        // ex: Fn+volume_up for an unknown reason ends up here
+        return
+      }
+      if (this.handler_layered) {
+        this.layer_finished()
+
+        if (!accelerator.is_layered) {
+          // another accelerator activated while handling a layered shortcut → ignore
+          return false
+        }
+      }
+      const layered = accelerator.trigger()
+      if (layered.length) {
+        // start layered mode
+        this.layered_mode_start(layered)
+      } else {
+        this.layered_mode_stop()
+      }
+    } catch (e) {
+      this.error(e, "Accelerator failed")
+    }
+  }
+
   _fetch_shortcuts() {
     let s
     try {
@@ -240,6 +252,7 @@ class App {
       this.handler_accelerator_activated = null
     }
     this.layered_mode_stop()
+    this.cycle?.cancel()
     if (this.handler_state_changed) {
       this.keymap.disconnect(this.handler_state_changed) // stop listening to keyboard-locks changes
       this.handler_state_changed = null

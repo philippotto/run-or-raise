@@ -1,4 +1,5 @@
 // Stand-in for resource:///org/gnome/shell/ui/main.js
+import { Clutter } from "./gi.js"
 
 export const activated = []
 export const notifications = []
@@ -27,4 +28,24 @@ export const layoutManager = {
   addChrome(actor) {
     this.chrome.push(actor)
   },
+}
+
+/** The modal grabs in effect, see pushModal */
+export const modals = []
+/** What pushModal is going to grab */
+export const grab = { state: Clutter.GrabState.ALL }
+
+export function pushModal(actor, params) {
+  const state = grab.state
+  const g = { actor, params, get_seat_state: () => state }
+  modals.push(g)
+  return g
+}
+
+export function popModal(g) {
+  const index = modals.indexOf(g)
+  if (index === -1) {
+    throw new Error("Grab not found")
+  }
+  modals.splice(index, 1)
 }

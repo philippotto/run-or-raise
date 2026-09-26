@@ -2,7 +2,7 @@
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
 import { reset, Window } from "./mocks/shell.js"
-import { GLib, Gio, Shell } from "./mocks/gi.js"
+import { Clutter, GLib, Gio, Shell } from "./mocks/gi.js"
 import * as Main from "./mocks/main.js"
 import RunOrRaiseExtension from "../extension.js"
 
@@ -135,6 +135,20 @@ test("modifier key keeps the layered mode", () => {
   const listener = Main.layoutManager.chrome[0]
   listener.emit("key-press-event", { get_key_symbol: () => "KEY_Shift_L" })
   assert.ok(!listener.destroyed)
+})
+
+test("disable while cycling ends the cycle", () => {
+  ext.enable()
+  display.add(new Window({ wm_class: "firefox" }))
+  display.add(new Window({ wm_class: "firefox" }))
+  global.get_pointer = () => [0, 0, Clutter.ModifierType.SUPER_MASK]
+  press("<Super>f")
+  press("<Super>f")
+  assert.equal(Main.modals.length, 1)
+  ext.disable()
+  assertDisabled()
+  assert.equal(Main.modals.length, 0)
+  assert.equal(Main.activated.length, 0)
 })
 
 test("lock-dependent shortcut is grabbed only in its keyboard state", () => {

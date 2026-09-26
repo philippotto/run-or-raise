@@ -96,23 +96,22 @@ test("always-run both raises and runs", () => {
   assert.equal(Gio.Subprocess.spawned.length, 1)
 })
 
-test("cycle through conforming windows", () => {
+test("switch between conforming windows in the most recently used order", () => {
   const ff1 = display.add(firefox())
   const ff2 = display.add(firefox())
   const ff3 = display.add(firefox())
-  display.add(terminal(), true) // [terminal, ff1, ff2, ff3]
+  const t = display.add(terminal(), true) // [t, ff1, ff2, ff3]
   const a = parseLine("<Super>f,firefox,firefox,", app)
 
   // the most recently used conforming window first
   a.trigger()
   assert.equal(display.focused, ff1)
-  // then the oldest ones of the group
-  a.trigger()
-  assert.equal(display.focused, ff3)
+  // then like Alt+Tab, the one used before it
   a.trigger()
   assert.equal(display.focused, ff2)
   a.trigger()
   assert.equal(display.focused, ff1)
+  assert.deepEqual(display.windows, [ff1, ff2, t, ff3])
 })
 
 test("focused single window stays focused", () => {
