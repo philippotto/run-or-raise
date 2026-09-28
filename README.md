@@ -8,6 +8,7 @@ This fork cycles through the windows of an application the way <kbd>Alt</kbd>+<k
 
 - Windows are cycled in the most-recently-used order: the first hit of a shortcut raises the last used window of the application, or if that one is focused already, the one used before it.
 - Hitting the shortcut again while keeping its modifiers held goes further back. Meanwhile, the windows are only peeked (the window is brought to the front, all other windows are dimmed); releasing the modifiers activates it. So peeking through the windows does not mess up their most-recently-used order. <kbd>Esc</kbd> cancels.
+- With [this Dash to Panel fork](https://github.com/philippotto/dash-to-panel/tree/cycle-shortcut), the taskbar icon of the peeked window is highlighted.
 
 ### Setup
 

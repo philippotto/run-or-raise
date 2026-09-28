@@ -223,3 +223,27 @@ test("single focused window is not cycled", () => {
   assert.equal(Main.modals.length, 0)
   assert.equal(display.focused, ff)
 })
+
+test("the Dash to Panel taskbar icon is highlighted", () => {
+  const highlighted = []
+  global.dashToPanel = { highlightWindow: w => highlighted.push(w) }
+  try {
+    a.trigger()
+    a.trigger()
+    release()
+    assert.deepEqual(highlighted, [ff1, ff2, null])
+  } finally {
+    delete global.dashToPanel
+  }
+})
+
+test("Dash to Panel without the highlight support", () => {
+  global.dashToPanel = {}
+  try {
+    a.trigger()
+    release()
+    assert.deepEqual(Main.activated, [ff1])
+  } finally {
+    delete global.dashToPanel
+  }
+})
